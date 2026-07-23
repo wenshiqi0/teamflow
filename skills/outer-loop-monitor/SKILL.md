@@ -5,16 +5,16 @@ description: Observe an OpenCode planner and subagent loop from the external coo
 
 # Outer Loop Monitor
 
-This Skill belongs only to the workflow repository's external coordinator. It is intentionally outside `.workflow/` and must never be copied by `scripts/init-project.sh` or exposed to inner planner, test-writer, runner, coder, command, or memory Agents.
+This Skill belongs only to the Teamflow repository's external coordinator. It is intentionally outside `.teamflow/` and must never be copied by `scripts/init-project.sh` or exposed to inner planner, test-writer, runner, coder, command, or memory Agents.
 
-Use it whenever an outer loop starts or resumes `workflow run` and needs to distinguish provider waiting from a disconnected or failed inner loop.
+Use it whenever an outer loop starts or resumes `teamflow run` and needs to distinguish provider waiting from a disconnected or failed inner loop.
 
 ## Start monitoring
 
 Find the root session without printing configuration:
 
 ```bash
-workflow session list --format json -n 5
+teamflow session list --format json -n 5
 ```
 
 Take a metadata-only snapshot:
@@ -49,7 +49,7 @@ The script reads only session relationships, timestamps, finish metadata, part t
 
 ## External coordinator policy
 
-1. Keep the `workflow run` process handle and root OpenCode session id.
+1. Keep the `teamflow run` process handle and root OpenCode session id.
 2. Poll the watcher or snapshots while the command is running; report meaningful state changes and periodic heartbeats.
 3. Do not terminate on elapsed time or lack of terminal output.
 4. Treat explicit provider errors, process exit, user cancellation, and receipt/artifact validation as terminal evidence.

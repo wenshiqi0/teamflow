@@ -7,7 +7,7 @@ from unittest import mock
 
 
 ROOT = Path(__file__).resolve().parents[1]
-PIPELINE_PATH = ROOT / ".workflow/skills/extract-memory/scripts/run_pipeline.py"
+PIPELINE_PATH = ROOT / ".teamflow/skills/extract-memory/scripts/run_pipeline.py"
 
 
 def load_pipeline():
@@ -20,7 +20,7 @@ def load_pipeline():
 
 class QueueWaitTests(unittest.TestCase):
     def test_all_provider_timeouts_are_explicitly_disabled(self):
-        config = json.loads((ROOT / ".workflow/config.json").read_text(encoding="utf-8"))
+        config = json.loads((ROOT / ".teamflow/config.json").read_text(encoding="utf-8"))
         for provider in ("zhipuai-coding-plan", "deepseek", "kimi", "mimo"):
             options = config["provider"][provider]["options"]
             self.assertIs(options["timeout"], False)

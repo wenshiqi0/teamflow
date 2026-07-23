@@ -133,7 +133,7 @@ class OuterLoopMonitorTests(unittest.TestCase):
                     "--now-ms",
                     "20000",
                     "--expected-artifact",
-                    ".workflow/runs/test-patches/example/tests.patch",
+                    ".teamflow/runs/test-patches/example/tests.patch",
                 ],
                 text=True,
                 capture_output=True,

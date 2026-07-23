@@ -4,11 +4,18 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
-WORKFLOW_HOME="${WORKFLOW_HOME:-$HOME/.workflow}"
-MEMORY_ROOT="${WORKFLOW_MEMORY_HOME:-${OPENCODE_WORKFLOW_MEMORY_HOME:-$WORKFLOW_HOME/memory}}"
-PROJECT_NAME="${WORKFLOW_MEMORY_PROJECT:-${BASIC_MEMORY_PROJECT:-workflow}}"
+USING_DEFAULT_MEMORY=true
+if [[ -n "${TEAMFLOW_HOME:-}" || -n "${TEAMFLOW_MEMORY_HOME:-}" || \
+      -n "${WORKFLOW_HOME:-}" || -n "${WORKFLOW_MEMORY_HOME:-}" || \
+      -n "${OPENCODE_WORKFLOW_MEMORY_HOME:-}" ]]; then
+  USING_DEFAULT_MEMORY=false
+fi
+TEAMFLOW_HOME="${TEAMFLOW_HOME:-${WORKFLOW_HOME:-$HOME/.teamflow}}"
+MEMORY_ROOT="${TEAMFLOW_MEMORY_HOME:-${WORKFLOW_MEMORY_HOME:-${OPENCODE_WORKFLOW_MEMORY_HOME:-$TEAMFLOW_HOME/memory}}}"
+PROJECT_NAME="${TEAMFLOW_MEMORY_PROJECT:-${WORKFLOW_MEMORY_PROJECT:-${BASIC_MEMORY_PROJECT:-teamflow}}}"
 PROJECT_DIR="$MEMORY_ROOT/knowledge"
-LEGACY_MEMORY_ROOT="$HOME/.opencode-workflow/memory"
+LEGACY_WORKFLOW_MEMORY_ROOT="$HOME/.workflow/memory"
+LEGACY_OPENCODE_MEMORY_ROOT="$HOME/.opencode-workflow/memory"
 
 export BASIC_MEMORY_AUTO_UPDATE=false
 export BASIC_MEMORY_CONFIG_DIR="$MEMORY_ROOT/state"
@@ -19,11 +26,11 @@ usage() {
   cat <<'EOF'
 Usage: ./scripts/setup-memory.sh [--project NAME]
 
-Initialize shared cross-project memory under ~/.workflow/memory:
+Initialize shared cross-project memory under ~/.teamflow/memory:
   knowledge/  Markdown source files
   state/      Basic Memory config, SQLite index, logs, and model cache
 
-This Git repository contains only the workflow definition and initializer.
+This Git repository contains only the teamflow definition and initializer.
 No account, API key, cloud service, or MCP server is used.
 EOF
 }
@@ -61,10 +68,15 @@ if ! command -v node >/dev/null 2>&1; then
   exit 1
 fi
 
-if [[ -z "${WORKFLOW_MEMORY_HOME:-}" && -z "${OPENCODE_WORKFLOW_MEMORY_HOME:-}" && \
-      ! -e "$MEMORY_ROOT" && -d "$LEGACY_MEMORY_ROOT" ]]; then
+if [[ "$USING_DEFAULT_MEMORY" == true && ! -e "$MEMORY_ROOT" && \
+      -d "$LEGACY_WORKFLOW_MEMORY_ROOT" ]]; then
   mkdir -p "$(dirname "$MEMORY_ROOT")"
-  mv "$LEGACY_MEMORY_ROOT" "$MEMORY_ROOT"
+  mv "$LEGACY_WORKFLOW_MEMORY_ROOT" "$MEMORY_ROOT"
+  echo "Migrated legacy local memory to: $MEMORY_ROOT"
+elif [[ "$USING_DEFAULT_MEMORY" == true && ! -e "$MEMORY_ROOT" && \
+        -d "$LEGACY_OPENCODE_MEMORY_ROOT" ]]; then
+  mkdir -p "$(dirname "$MEMORY_ROOT")"
+  mv "$LEGACY_OPENCODE_MEMORY_ROOT" "$MEMORY_ROOT"
   echo "Migrated legacy local memory to: $MEMORY_ROOT"
 fi
 

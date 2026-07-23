@@ -3,7 +3,11 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
-WORKFLOW_HOME="${WORKFLOW_HOME:-$HOME/.workflow}"
+DEFAULT_TEAMFLOW_HOME=false
+if [[ -z "${TEAMFLOW_HOME+x}" && -z "${WORKFLOW_HOME+x}" ]]; then
+  DEFAULT_TEAMFLOW_HOME=true
+fi
+TEAMFLOW_HOME="${TEAMFLOW_HOME:-${WORKFLOW_HOME:-$HOME/.teamflow}}"
 
 if ! command -v git >/dev/null 2>&1; then
   echo "error: git is required" >&2
@@ -73,28 +77,38 @@ else
   uv tool install basic-memory
 fi
 
-if [[ ! -f "$WORKFLOW_HOME/.env" ]]; then
-  mkdir -p "$WORKFLOW_HOME"
-  if [[ -f .workflow/.env ]]; then
-    cp .workflow/.env "$WORKFLOW_HOME/.env"
-    echo "Migrated model credentials to $WORKFLOW_HOME/.env."
+if [[ ! -f "$TEAMFLOW_HOME/.env" ]]; then
+  mkdir -p "$TEAMFLOW_HOME"
+  if [[ "$DEFAULT_TEAMFLOW_HOME" == true && -f "$HOME/.workflow/.env" ]]; then
+    cp -p "$HOME/.workflow/.env" "$TEAMFLOW_HOME/.env"
+    echo "Migrated legacy model credentials to $TEAMFLOW_HOME/.env."
+  elif [[ -f .teamflow/.env ]]; then
+    cp .teamflow/.env "$TEAMFLOW_HOME/.env"
+    echo "Migrated model credentials to $TEAMFLOW_HOME/.env."
   elif [[ -f .env ]]; then
-    cp .env "$WORKFLOW_HOME/.env"
-    echo "Migrated model credentials to $WORKFLOW_HOME/.env."
+    cp .env "$TEAMFLOW_HOME/.env"
+    echo "Migrated model credentials to $TEAMFLOW_HOME/.env."
   else
-    cp .env.example "$WORKFLOW_HOME/.env"
-    echo "Created $WORKFLOW_HOME/.env; add the model API keys before running the workflow."
+    cp .env.example "$TEAMFLOW_HOME/.env"
+    echo "Created $TEAMFLOW_HOME/.env; add the model API keys before running teamflow."
   fi
 fi
 
-LAUNCHER_DIR="${WORKFLOW_BIN_DIR:-$HOME/.local/bin}"
-LAUNCHER_PATH="$LAUNCHER_DIR/workflow"
-if [[ -f "$LAUNCHER_PATH" ]] && ! grep -q 'agent-workflow-launcher' "$LAUNCHER_PATH"; then
+LAUNCHER_DIR="${TEAMFLOW_BIN_DIR:-${WORKFLOW_BIN_DIR:-$HOME/.local/bin}}"
+LEGACY_COMMAND="$LAUNCHER_DIR/workflow"
+if [[ -f "$LEGACY_COMMAND" && ! -L "$LEGACY_COMMAND" ]] && \
+   grep -q 'agent-workflow-launcher' "$LEGACY_COMMAND"; then
+  rm -f "$LEGACY_COMMAND"
+elif [[ -e "$LEGACY_COMMAND" || -L "$LEGACY_COMMAND" ]]; then
+  echo "warning: preserving unrelated legacy command: $LEGACY_COMMAND" >&2
+fi
+LAUNCHER_PATH="$LAUNCHER_DIR/teamflow"
+if [[ -f "$LAUNCHER_PATH" ]] && ! grep -q 'agent-teamflow-launcher' "$LAUNCHER_PATH"; then
   echo "warning: not replacing unrelated command: $LAUNCHER_PATH" >&2
 else
   mkdir -p "$LAUNCHER_DIR"
-  install -m 0755 "$ROOT_DIR/scripts/workflow" "$LAUNCHER_PATH"
-  echo "Installed workflow launcher: $LAUNCHER_PATH"
+  install -m 0755 "$ROOT_DIR/scripts/teamflow" "$LAUNCHER_PATH"
+  echo "Installed teamflow launcher: $LAUNCHER_PATH"
 fi
 
 echo "OpenCode $(opencode --version) is available."

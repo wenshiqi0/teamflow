@@ -17,7 +17,7 @@ Download current official Basic Memory Skills and prepare a descriptive update
 prompt that converts them into this repository's CLI-only variants.
 
   --ref REF              Upstream Git ref, tag, or commit (default: main)
-  --output DIR           Snapshot/prompt directory (default: ignored .workflow/)
+  --output DIR           Snapshot/prompt directory (default: ignored .teamflow/)
   --instruction TEXT     Additional update intent appended to the prompt
   --apply                Run the generated prompt through the configured Planner
   -h, --help             Show this help
@@ -62,7 +62,7 @@ done
 
 if [[ -z "$OUTPUT_DIR" ]]; then
   timestamp="$(date -u +'%Y%m%dT%H%M%SZ')"
-  OUTPUT_DIR="$ROOT_DIR/.workflow/basic-memory-skill-update/$timestamp"
+  OUTPUT_DIR="$ROOT_DIR/.teamflow/basic-memory-skill-update/$timestamp"
 elif [[ "$OUTPUT_DIR" != /* ]]; then
   OUTPUT_DIR="$ROOT_DIR/$OUTPUT_DIR"
 fi
@@ -93,27 +93,27 @@ for this repository's CLI-only coding workflow.
 EOF
   printf '\nUpstream ref: %s\n' "$REF"
   printf 'Upstream snapshots: %s\n' "$UPSTREAM_DIR"
-  printf 'Local targets: %s\n' "$ROOT_DIR/.workflow/skills/memory-{notes,capture,continue,curate}/SKILL.md"
-  printf 'CLI adapter: %s\n' "$ROOT_DIR/.workflow/skills/basic-memory-cli/SKILL.md"
+  printf 'Local targets: %s\n' "$ROOT_DIR/.teamflow/skills/memory-{notes,capture,continue,curate}/SKILL.md"
+  printf 'CLI adapter: %s\n' "$ROOT_DIR/.teamflow/skills/basic-memory-cli/SKILL.md"
   printf '\nAdditional intent:\n%s\n' "$INSTRUCTION"
   cat <<'EOF'
 
 Required behavior:
 
 1. Read all four upstream snapshots, all four local target files, the CLI
-   adapter, AGENTS.md, and `.workflow/bin/memory` before editing.
+   adapter, AGENTS.md, and `.teamflow/bin/memory` before editing.
 2. Keep only `name` and `description` in each YAML frontmatter. Make each
    description state what the Skill does and when it should trigger.
 3. Remove every MCP reference and every function-call example such as
    `search_notes(...)`, `write_note(...)`, `read_note(...)`,
    `build_context(...)`, and `recent_activity(...)`.
 4. Replace operations with exact supported commands:
-   - `workflow memory recall|read|context|list|remember|remember-global`
-   - `workflow memory-capture --receipt <verified-task-receipt>`
+   - `teamflow memory recall|read|context|list|remember|remember-global`
+   - `teamflow memory-capture --receipt <verified-task-receipt>`
    - `basic-memory tool search-notes|write-note|read-note|edit-note|build-context|recent-activity`
-5. Add `--project workflow --local` to direct note commands. Use
+5. Add `--project teamflow --local` to direct note commands. Use
    `BASIC_MEMORY_SEMANTIC_SEARCH_ENABLED=false` for offline full-text search.
-6. Keep shared data under `~/.workflow/memory`; never introduce cloud
+6. Keep shared data under `~/.teamflow/memory`; never introduce cloud
    login, cloud sync, account setup, or a server process.
 7. Respect workflow policy: automated task capture must use the verified-task
    receipt and Emotion -> DeepSeek -> GLM -> MiMo pipeline after checks report
@@ -128,7 +128,7 @@ Acceptance checks:
 - No MCP text remains in the four local target files.
 - No underscore-style tool invocation remains.
 - All four folders pass the Skill frontmatter validator.
-- `bash -n scripts/*.sh .workflow/bin/*` and `git diff --check` pass.
+- `bash -n scripts/*.sh .teamflow/bin/*` and `git diff --check` pass.
 - Summarize upstream behavior adopted, behavior intentionally omitted, and all
   validation evidence.
 EOF
@@ -138,17 +138,17 @@ echo "Prepared update prompt: $PROMPT_FILE"
 
 if [[ "$APPLY" == true ]]; then
   echo "Applying update through the configured Planner..."
-  "$ROOT_DIR/.workflow/bin/workflow" run --agent planner "$(cat "$PROMPT_FILE")"
+  "$ROOT_DIR/.teamflow/bin/teamflow" run --agent planner "$(cat "$PROMPT_FILE")"
 fi
 
 if [[ "$APPLY" == true ]]; then
   if rg -n '\bMCP\b|search_notes\(|write_note\(|read_note\(|build_context\(|recent_activity\(|list_memory_projects\(' \
-    .workflow/skills/memory-{notes,capture,continue,curate}/SKILL.md; then
+    .teamflow/skills/memory-{notes,capture,continue,curate}/SKILL.md; then
     echo "error: CLI-only validation found forbidden upstream syntax" >&2
     exit 1
   fi
 
-  node - .workflow/skills/memory-{notes,capture,continue,curate}/SKILL.md <<'NODE'
+  node - .teamflow/skills/memory-{notes,capture,continue,curate}/SKILL.md <<'NODE'
 const fs = require("node:fs");
 const path = require("node:path");
 for (const file of process.argv.slice(2)) {
@@ -165,7 +165,7 @@ for (const file of process.argv.slice(2)) {
 }
 NODE
 
-  bash -n scripts/*.sh .workflow/bin/*
+  bash -n scripts/*.sh .teamflow/bin/*
   git diff --check
   echo "CLI-only Skill update validation passed."
 else

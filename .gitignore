@@ -2,10 +2,10 @@
 __pycache__/
 *.pyc
 .env
-.workflow/.env
-.workflow/basic-memory-skill-update/
-.workflow/node_modules/
-.workflow/package.json
-.workflow/package-lock.json
-.workflow/bun.lock
-.workflow/runs/
+.teamflow/.env
+.teamflow/basic-memory-skill-update/
+.teamflow/node_modules/
+.teamflow/package.json
+.teamflow/package-lock.json
+.teamflow/bun.lock
+.teamflow/runs/

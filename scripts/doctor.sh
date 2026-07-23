@@ -3,18 +3,18 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
-WORKFLOW_HOME="${WORKFLOW_HOME:-$HOME/.workflow}"
-MEMORY_ROOT="${WORKFLOW_MEMORY_HOME:-${OPENCODE_WORKFLOW_MEMORY_HOME:-$WORKFLOW_HOME/memory}}"
+TEAMFLOW_HOME="${TEAMFLOW_HOME:-${WORKFLOW_HOME:-$HOME/.teamflow}}"
+MEMORY_ROOT="${TEAMFLOW_MEMORY_HOME:-${WORKFLOW_MEMORY_HOME:-${OPENCODE_WORKFLOW_MEMORY_HOME:-$TEAMFLOW_HOME/memory}}}"
 export BASIC_MEMORY_AUTO_UPDATE=false
 export BASIC_MEMORY_CONFIG_DIR="$MEMORY_ROOT/state"
 export BASIC_MEMORY_HOME="$MEMORY_ROOT/knowledge"
 export BASIC_MEMORY_SEMANTIC_SEARCH_ENABLED=false
 
 ERRORS=0
-DOCTOR_HOME="${TMPDIR:-/tmp}/agent-workflow-doctor"
+DOCTOR_HOME="${TMPDIR:-/tmp}/agent-teamflow-doctor"
 MIN_OPENCODE_VERSION="1.18.4"
 MIN_BASIC_MEMORY_VERSION="0.22.1"
-MEMORY_PROJECT_NAME="${WORKFLOW_MEMORY_PROJECT:-${BASIC_MEMORY_PROJECT:-workflow}}"
+MEMORY_PROJECT_NAME="${TEAMFLOW_MEMORY_PROJECT:-${WORKFLOW_MEMORY_PROJECT:-${BASIC_MEMORY_PROJECT:-teamflow}}}"
 mkdir -p "$DOCTOR_HOME"
 
 pass() {
@@ -101,20 +101,20 @@ else
   fail "basic-memory is not installed; run ./scripts/bootstrap.sh"
 fi
 
-if node -e 'JSON.parse(require("fs").readFileSync(".workflow/config.json", "utf8"))' >/dev/null 2>&1; then
-  pass "workflow configuration is valid JSON"
+if node -e 'JSON.parse(require("fs").readFileSync(".teamflow/config.json", "utf8"))' >/dev/null 2>&1; then
+  pass "teamflow configuration is valid JSON"
 else
-  fail ".workflow/config.json is not valid JSON"
+  fail ".teamflow/config.json is not valid JSON"
 fi
 
-if python3 .workflow/skills/implement-change/scripts/source_safety.py --self-test >/dev/null && \
-   python3 .workflow/skills/implement-change/scripts/source_safety.py README.md >/dev/null; then
+if python3 .teamflow/skills/implement-change/scripts/source_safety.py --self-test >/dev/null && \
+   python3 .teamflow/skills/implement-change/scripts/source_safety.py README.md >/dev/null; then
   pass "source control-byte gate is operational"
 else
   fail "source control-byte gate failed on README.md"
 fi
 
-if python3 .workflow/skills/plan-change/scripts/phase_state.py --help >/dev/null; then
+if python3 .teamflow/skills/plan-change/scripts/phase_state.py --help >/dev/null; then
   pass "code phase receipts are operational"
 else
   fail "code phase receipt helper is unavailable"
@@ -125,7 +125,7 @@ INHERITED_ZHIPU_API_KEY="${ZHIPU_API_KEY:-}"
 INHERITED_MIMO_API_KEY="${MIMO_API_KEY:-}"
 INHERITED_DEEPSEEK_API_KEY="${DEEPSEEK_API_KEY:-}"
 LOADED_ENV=false
-for env_file in "$WORKFLOW_HOME/.env" .workflow/.env; do
+for env_file in "$TEAMFLOW_HOME/.env" .teamflow/.env; do
   if [[ ! -f "$env_file" ]]; then continue; fi
   LOADED_ENV=true
   set -a
@@ -138,7 +138,7 @@ if [[ -n "$INHERITED_ZHIPU_API_KEY" ]]; then export ZHIPU_API_KEY="$INHERITED_ZH
 if [[ -n "$INHERITED_MIMO_API_KEY" ]]; then export MIMO_API_KEY="$INHERITED_MIMO_API_KEY"; fi
 if [[ -n "$INHERITED_DEEPSEEK_API_KEY" ]]; then export DEEPSEEK_API_KEY="$INHERITED_DEEPSEEK_API_KEY"; fi
 if [[ "$LOADED_ENV" != true && ( -z "${KIMI_API_KEY:-}" || -z "${ZHIPU_API_KEY:-}" || -z "${MIMO_API_KEY:-}" || -z "${DEEPSEEK_API_KEY:-}" ) ]]; then
-  fail "$WORKFLOW_HOME/.env is missing; copy .env.example there"
+  fail "$TEAMFLOW_HOME/.env is missing; copy .env.example there"
 fi
 
 if [[ -n "${KIMI_API_KEY:-}" ]]; then
@@ -165,8 +165,8 @@ else
   fail "DEEPSEEK_API_KEY is empty"
 fi
 
-for runtime_command in workflow memory memory-capture test-patch; do
-  if [[ -x ".workflow/bin/$runtime_command" ]]; then
+for runtime_command in teamflow memory memory-capture test-patch; do
+  if [[ -x ".teamflow/bin/$runtime_command" ]]; then
     pass "runtime command $runtime_command is executable"
   else
     fail "runtime command $runtime_command is missing or not executable"
@@ -174,7 +174,7 @@ for runtime_command in workflow memory memory-capture test-patch; do
 done
 
 for experiment_command in memory-experiment memory-compare; do
-  if [[ -x ".workflow/experiments/bin/$experiment_command" ]]; then
+  if [[ -x ".teamflow/experiments/bin/$experiment_command" ]]; then
     pass "experimental command $experiment_command is isolated from the public bin"
   else
     fail "experimental command $experiment_command is missing or not executable"
@@ -182,14 +182,14 @@ for experiment_command in memory-experiment memory-compare; do
 done
 
 for agent in planner command coder test-writer test-runner emotional-salience-sensor memory-compressor memory-extractor memory-formatter; do
-  if HOME="$DOCTOR_HOME" ./.workflow/bin/workflow debug agent "$agent" >/dev/null 2>&1; then
+  if HOME="$DOCTOR_HOME" ./.teamflow/bin/teamflow debug agent "$agent" >/dev/null 2>&1; then
     pass "agent $agent is discoverable"
   else
     fail "agent $agent is not discoverable"
   fi
 done
 
-SKILL_OUTPUT="$(HOME="$DOCTOR_HOME" ./.workflow/bin/workflow debug skill 2>/dev/null)"
+SKILL_OUTPUT="$(HOME="$DOCTOR_HOME" ./.teamflow/bin/teamflow debug skill 2>/dev/null)"
 if grep -q 'plan-change' <<<"$SKILL_OUTPUT" && \
    grep -q 'basic-memory-cli' <<<"$SKILL_OUTPUT" && \
    grep -q 'memory-notes' <<<"$SKILL_OUTPUT" && \

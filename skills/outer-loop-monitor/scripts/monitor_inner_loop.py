@@ -171,7 +171,7 @@ def artifact_metadata(project_root: Path, value: str) -> dict:
 def phase_metadata(project_root: Path, run_id: str | None) -> dict | None:
     if not run_id:
         return None
-    current_path = project_root / ".workflow/runs/code" / run_id / "current.json"
+    current_path = project_root / ".teamflow/runs/code" / run_id / "current.json"
     if not current_path.is_file():
         return {"run_id": run_id, "status": "MISSING"}
     current = parse_json(current_path.read_text(encoding="utf-8"))

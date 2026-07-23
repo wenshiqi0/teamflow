@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# agent-teamflow-launcher
+TARGET_INPUT="${TEAMFLOW_PROJECT:-${WORKFLOW_PROJECT:-$PWD}}"
+TARGET_ROOT="$(git -C "$TARGET_INPUT" rev-parse --show-toplevel 2>/dev/null || true)"
+if [[ -z "$TARGET_ROOT" ]]; then
+  echo "error: teamflow must run inside an initialized Git project" >&2
+  exit 1
+fi
+
+RUNTIME="$TARGET_ROOT/.teamflow/bin/teamflow"
+if [[ ! -x "$RUNTIME" ]]; then
+  echo "error: teamflow is not initialized in $TARGET_ROOT" >&2
+  echo "Run the teamflow initializer for this project first." >&2
+  exit 1
+fi
+
+exec "$RUNTIME" "$@"
