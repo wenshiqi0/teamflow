@@ -1,0 +1,115 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+WORKFLOW_HOME="${WORKFLOW_HOME:-$HOME/.workflow}"
+MEMORY_ROOT="${WORKFLOW_MEMORY_HOME:-${OPENCODE_WORKFLOW_MEMORY_HOME:-$WORKFLOW_HOME/memory}}"
+export BASIC_MEMORY_AUTO_UPDATE=false
+export BASIC_MEMORY_CONFIG_DIR="$MEMORY_ROOT/state"
+export BASIC_MEMORY_HOME="$MEMORY_ROOT/knowledge"
+export BASIC_MEMORY_SEMANTIC_SEARCH_ENABLED=false
+
+usage() {
+  cat <<'EOF'
+Usage:
+  workflow memory recall <query>
+  workflow memory remember <verified project finding>
+  workflow memory remember-global <verified reusable finding>
+  workflow memory read <memory-url-or-permalink>
+  workflow memory context <memory-url-or-permalink>
+  workflow memory list
+  workflow memory status
+EOF
+}
+
+if ! command -v basic-memory >/dev/null 2>&1; then
+  echo '{"status":"error","error":"basic-memory is not installed; run the workflow bootstrap"}' >&2
+  exit 1
+fi
+
+PROJECT_NAME="${WORKFLOW_MEMORY_PROJECT:-${BASIC_MEMORY_PROJECT:-workflow}}"
+ACTION="${1:-}"
+if [[ -z "$ACTION" ]]; then
+  usage >&2
+  exit 1
+fi
+shift
+
+WORKING_DIRECTORY="$(pwd -P)"
+REPOSITORY="$(git -C "$WORKING_DIRECTORY" config --get remote.origin.url 2>/dev/null || printf '%s' "$WORKING_DIRECTORY")"
+REPOSITORY_NAME="${REPOSITORY##*/}"
+REPOSITORY_NAME="${REPOSITORY_NAME%.git}"
+REPOSITORY_SLUG="$(printf '%s' "$REPOSITORY_NAME" | tr '[:upper:]' '[:lower:]' | tr -cs '[:alnum:]._-' '-')"
+REPOSITORY_SLUG="${REPOSITORY_SLUG%-}"
+
+require_text() {
+  if (( $# == 0 )); then
+    echo "error: $ACTION requires text" >&2
+    exit 1
+  fi
+}
+
+write_finding() {
+  local scope="$1"
+  local folder="$2"
+  shift 2
+  local finding="$*"
+  local recorded_at hash title content
+  recorded_at="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+  hash="$(printf '%s\0%s\0%s' "$scope" "$REPOSITORY" "$finding" | shasum -a 256 | cut -c1-12)"
+  title="Verified finding $hash"
+  content="$(printf '# Verified finding\n\n%s\n\n## Observations\n\n- [fact] %s\n- [scope] %s\n- [source] Repository: %s\n- [evidence] Recorded by the workflow only after required verification reported PASS.\n- [recorded] %s\n' \
+    "$finding" "$finding" "$scope" "$REPOSITORY" "$recorded_at")"
+
+  basic-memory tool write-note \
+    --title "$title" \
+    --folder "$folder" \
+    --content "$content" \
+    --tags "coding,workflow,verified" \
+    --type "workflow-finding" \
+    --project "$PROJECT_NAME" \
+    --overwrite \
+    --local
+}
+
+case "$ACTION" in
+  recall)
+    require_text "$@"
+    basic-memory tool search-notes "$*" \
+      --page-size 8 --project "$PROJECT_NAME" --local
+    ;;
+  remember)
+    require_text "$@"
+    write_finding "repository-specific" "projects/$REPOSITORY_SLUG" "$@"
+    ;;
+  remember-global)
+    require_text "$@"
+    write_finding "cross-project" "global" "$@"
+    ;;
+  read)
+    require_text "$@"
+    basic-memory tool read-note "$1" \
+      --include-frontmatter --project "$PROJECT_NAME" --local
+    ;;
+  context)
+    require_text "$@"
+    basic-memory tool build-context "$1" \
+      --depth 2 --timeframe 30d --page-size 20 \
+      --project "$PROJECT_NAME" --local
+    ;;
+  list)
+    basic-memory tool recent-activity \
+      --timeframe 365d --page-size 50 --project "$PROJECT_NAME" --local
+    ;;
+  status)
+    basic-memory project info "$PROJECT_NAME" --local --json
+    basic-memory status --project "$PROJECT_NAME" --local
+    ;;
+  -h|--help|help)
+    usage
+    ;;
+  *)
+    echo "error: unknown memory action: $ACTION" >&2
+    usage >&2
+    exit 1
+    ;;
+esac

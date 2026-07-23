@@ -1,0 +1,11 @@
+.DS_Store
+__pycache__/
+*.pyc
+.env
+.workflow/.env
+.workflow/basic-memory-skill-update/
+.workflow/node_modules/
+.workflow/package.json
+.workflow/package-lock.json
+.workflow/bun.lock
+.workflow/runs/
